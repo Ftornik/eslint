@@ -15,9 +15,11 @@ var path = require("path"),
     fs = require("fs"),
     os = require("os"),
     assert = require("chai").assert,
+    sinon = require("sinon"),
     sh = require("shelljs"),
     assign = require("object-assign"),
     sourceCodeObtain = require("../../../lib/util/source-code-obtain"),
+    SourceCode = require("../../../lib/util/source-code"),
     defaultOptions = require("../../../conf/cli-options");
 
 var originalDir = process.cwd();
@@ -114,10 +116,11 @@ describe("SourceCodeObtain", function() {
             var filename = getFixturePath("foo.js");
             var sourceCode = sourceCodeObtain.getSourceCodeOfFiles(filename);
             assert.isObject(sourceCode);
+            assert.instanceOf(sourceCode[filename], SourceCode);
         });
 
         it("should honor .eslintignore files by default", function() {
-            // This is needed because by default cwd is eslint project root,
+            // Setting options is needed because by default cwd is eslint project root,
             // and the fixture .eslintignore file is not used.
             var options = assign({}, defaultOptions, {cwd: process.cwd()});
             var glob = getFixturePath("*.js");
@@ -126,6 +129,51 @@ describe("SourceCodeObtain", function() {
             assert.property(sourceCode, unignoredFilename);
             assert.notProperty(sourceCode, "./tests/fixtures/source-code-obtain/ignored.js");
         });
+
+        it("should obtain the sourceCode of all files in a specified folder", function() {
+            var folder = getFixturePath("nested");
+            var fooFile = getFixturePath("nested/foo.js");
+            var barFile = getFixturePath("nested/bar.js");
+            var sourceCode = sourceCodeObtain.getSourceCodeOfFiles(folder);
+            assert.equal(Object.keys(sourceCode).length, 2);
+            assert.instanceOf(sourceCode[fooFile], SourceCode);
+            assert.instanceOf(sourceCode[barFile], SourceCode);
+        });
+
+        it("should accept cli options", function() {
+            var pattern = getFixturePath("ext");
+            var abcFile = getFixturePath("ext/foo.abc");
+            var cliOptions = {extensions: [".abc"]};
+            var sourceCode = sourceCodeObtain.getSourceCodeOfFiles(pattern, cliOptions);
+            assert.equal(Object.keys(sourceCode).length, 1);
+            assert.instanceOf(sourceCode[abcFile], SourceCode);
+        });
+
+        it("should execute the callback function, if provided", function() {
+            var callback = sinon.spy();
+            var filename = getFixturePath("foo.js");
+            sourceCodeObtain.getSourceCodeOfFiles(filename, callback);
+            assert(callback.calledOnce);
+        });
+
+        it("should execute callback function once per file", function() {
+            var callback = sinon.spy();
+            var fooFilename = getFixturePath("foo.js");
+            var barFilename = getFixturePath("bar.js");
+            sourceCodeObtain.getSourceCodeOfFiles([fooFilename, barFilename], callback);
+            assert.equal(callback.callCount, 2);
+        });
+
+        it("should call callback function with total number of files with sourceCode", function() {
+            var callback = sinon.spy();
+            var firstFn = getFixturePath("foo.js");
+            var secondFn = getFixturePath("bar.js");
+            var thirdFn = getFixturePath("nested/foo.js");
+            var missingFn = getFixturePath("missing.js");
+            sourceCodeObtain.getSourceCodeOfFiles([firstFn, secondFn, thirdFn, missingFn], callback);
+            assert(callback.calledWith(3));
+        });
+
     });
 
 });
