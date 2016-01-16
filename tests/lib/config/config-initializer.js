@@ -21,8 +21,10 @@ var answers = {};
 describe("configInitializer", function() {
 
     describe("processAnswers()", function() {
+
         beforeEach(function() {
             answers = {
+                source: "prompt",
                 extendDefault: true,
                 indent: 2,
                 quotes: "single",
@@ -57,15 +59,15 @@ describe("configInitializer", function() {
         it("should enable jsx flag", function() {
             answers.jsx = true;
             var config = init.processAnswers(answers);
-            assert.equal(config.ecmaFeatures.jsx, true);
+            assert.equal(config.parserOptions.ecmaFeatures.jsx, true);
         });
 
         it("should enable react plugin", function() {
             answers.jsx = true;
             answers.react = true;
             var config = init.processAnswers(answers);
-            assert.equal(config.ecmaFeatures.jsx, true);
-            assert.equal(config.ecmaFeatures.experimentalObjectRestSpread, true);
+            assert.equal(config.parserOptions.ecmaFeatures.jsx, true);
+            assert.equal(config.parserOptions.ecmaFeatures.experimentalObjectRestSpread, true);
             assert.deepEqual(config.plugins, ["react"]);
         });
 
